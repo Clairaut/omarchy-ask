@@ -6,8 +6,8 @@ import "Model.js" as Model
 
 Panel {
     id: root
-    moduleName: "clairaut.voice"
-    ipcTarget: "clairaut.voice"
+    moduleName: "clairaut.ask"
+    ipcTarget: "clairaut.ask"
     manageIpc: true
 
     property var anchorItem: null
@@ -167,7 +167,7 @@ Panel {
                                 }
                             }
 
-                            VoiceGlyph {
+                            StateGlyph {
                                 visible: root.view === "now"
                                 anchors.verticalCenter: parent.verticalCenter
                                 state: service ? service.currentState : "idle"
@@ -474,7 +474,7 @@ Panel {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Style.space(8)
 
-                        VoiceGlyph {
+                        StateGlyph {
                             anchors.verticalCenter: parent.verticalCenter
                             state: "typing"
                             color: Color.muted

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "clairaut.voice",
-  "name": "Voice",
+  "id": "clairaut.ask",
+  "name": "Ask",
   "version": "0.1.0",
   "author": "clairaut",
-  "description": "Dashboard for the SUPER+H voice assistant: what it is doing, what it has said, and any write waiting on approval",
+  "description": "Dashboard for the SUPER+H assistant: what it is doing, what it has said, and any write waiting on approval",
   "kinds": [
     "bar-widget"
   ],
@@ -12,8 +12,8 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Voice",
-    "description": "State of the voice assistant, with a panel for its conversation and pending approvals.",
+    "displayName": "Ask",
+    "description": "State of the AI assistant, with a panel for its conversations and pending approvals.",
     "category": "Info",
     "defaultSection": "right",
     "allowMultiple": false

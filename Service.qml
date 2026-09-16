@@ -6,21 +6,21 @@ import "Model.js" as Model
 // Everything the widget and the panel both need to know, in one place, so the
 // bar face and the dropdown can never disagree about what the assistant is doing.
 //
-// voice-ai runs per keypress and exits, so there is no process to ask. State is
+// ask runs per keypress and exits, so there is no process to ask. State is
 // files: state.json for the current transition, queue/*.json for writes waiting
 // on approval, and the plain-text log for what has been said.
 Item {
     id: root
 
-    readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/voice-ai"
+    readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/ask"
     readonly property string queueDir: runtimeDir + "/queue"
-    readonly property string logPath: Quickshell.env("HOME") + "/.local/share/voice-ai/log.txt"
-    readonly property string binary: Quickshell.env("HOME") + "/.local/bin/voice-ai"
+    readonly property string logPath: Quickshell.env("HOME") + "/.local/share/ask/log.txt"
+    readonly property string binary: Quickshell.env("HOME") + "/.local/bin/ask"
 
     // claude --continue keys off the working directory, so its transcripts live
     // in a project directory derived from the session path.
     readonly property string projectDir: Quickshell.env("HOME") + "/.claude/projects/"
-        + String(Quickshell.env("HOME") + "/.local/share/voice-ai/session").replace(/[/.]/g, "-")
+        + String(Quickshell.env("HOME") + "/.local/share/ask/session").replace(/[/.]/g, "-")
 
     property var conversations: []
     property var state: null
@@ -246,7 +246,7 @@ Item {
     function ask(text) {
         var trimmed = String(text || "").trim()
         if (trimmed === "") return false
-        actionProc.command = [root.binary, "--ask", trimmed]
+        actionProc.command = [root.binary, trimmed]
         actionProc.running = true
         return true
     }

@@ -9,9 +9,9 @@ import "Model.js" as Model
 // contract has to live here rather than in a file this loads.
 BarWidget {
     id: root
-    moduleName: "clairaut.voice"
+    moduleName: "clairaut.ask"
 
-    readonly property var service: voiceService
+    readonly property var service: askService
     readonly property string state: service.currentState
     readonly property var tone: Model.describe(state)
 
@@ -35,7 +35,7 @@ BarWidget {
         return String(service.turns)
     }
 
-    Service { id: voiceService }
+    Service { id: askService }
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
@@ -71,7 +71,7 @@ BarWidget {
             anchors.centerIn: parent
             spacing: Style.space(6)
 
-            VoiceGlyph {
+            StateGlyph {
                 anchors.verticalCenter: parent.verticalCenter
                 state: root.state
                 color: root.glyphColor

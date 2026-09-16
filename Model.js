@@ -1,6 +1,6 @@
 .pragma library
 
-// The states voice-ai writes into state.json, plus "waiting", which the widget
+// The states ask writes into state.json, plus "waiting", which the widget
 // infers when the approval queue is not empty. Anything unrecognised falls back
 // to idle rather than rendering nothing.
 var STATES = {

@@ -19,7 +19,7 @@ Item {
     property int size: Style.font.icon
 
     readonly property var glyphs: ({
-        "idle":         "\uf075",  // speech bubble: it takes voice or typing now
+        "idle":         "\uf075",  // speech bubble: it takes speech or typing now
         "listening":    "\uf130",  // microphone, because while recording it is one
         "transcribing": "\uf012",  // signal bars
         "thinking":     "\uf110",  // spinner, the one state with no other progress cue

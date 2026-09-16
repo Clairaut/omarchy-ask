@@ -45,15 +45,30 @@ Item {
         onLoadFailed: root.state = null
     }
 
-    // ---------- conversation ----------
-    FileView {
-        path: root.logPath
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: root.exchanges = Model.parseLog(text(), 6)
-        onLoadFailed: root.exchanges = []
+    // ---------- the current conversation ----------
+    // Read from the live transcript, not log.txt: the log is append-only across
+    // every session and never cleared, so it mixes conversations together and
+    // shows turns from ones that have since been archived.
+    Process {
+        id: currentScan
+        running: false
+        command: ["sh", "-c", "cat " + root.projectDir + "/*.jsonl 2>/dev/null | tail -n 600"]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                var all = root.parseTranscript(text)
+                root.exchanges = all.slice(-6).reverse()
+            }
+        }
     }
+
+    function refreshCurrent() {
+        if (!currentScan.running) currentScan.running = true
+    }
+
+    // A completed turn is the only thing that changes the current conversation.
+    onTurnsChanged: refreshCurrent()
+    Component.onCompleted: refreshCurrent()
 
     // ---------- approval queue ----------
     // A directory cannot be watched the way a file can, so it is polled. One

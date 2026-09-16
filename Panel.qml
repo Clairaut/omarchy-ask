@@ -176,10 +176,10 @@ Panel {
                     width: parent.width
                     spacing: 0
                     bottomPadding: Style.space(10)
-                    visible: root.view === "now" && service && service.exchanges.length > 0
+                    visible: root.view === "now"
 
                     Text {
-                        text: "CONVERSATION"
+                        text: "THIS SESSION"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         font.letterSpacing: 1.4
@@ -187,6 +187,16 @@ Panel {
                         leftPadding: Style.space(14)
                         topPadding: Style.space(11)
                         bottomPadding: Style.space(4)
+                    }
+
+                    Text {
+                        visible: !service || service.exchanges.length === 0
+                        text: "nothing asked yet in this session"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.bodySmall
+                        color: Color.muted
+                        leftPadding: Style.space(14)
+                        bottomPadding: Style.space(6)
                     }
 
                     Repeater {

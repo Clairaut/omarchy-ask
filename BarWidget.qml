@@ -75,7 +75,9 @@ BarWidget {
                 anchors.verticalCenter: parent.verticalCenter
                 state: root.state
                 color: root.glyphColor
-                size: Style.bar.iconCanvas
+                // iconFont, not iconCanvas: the stock bar buttons render their
+                // glyph at the former and reserve the latter for the canvas.
+                size: Style.bar.iconFont
             }
 
             Text {

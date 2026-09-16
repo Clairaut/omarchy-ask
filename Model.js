@@ -57,33 +57,6 @@ function clock(seconds) {
     return m + ":" + (s < 10 ? "0" : "") + s
 }
 
-// Split the plain-text log into exchanges, newest first. The log is the record
-// the script already keeps, so the panel reads it rather than inventing a
-// second store that could disagree with it.
-function parseLog(text, limit) {
-    var entries = []
-    var blocks = String(text || "").split(/\n===== /)
-
-    for (var i = blocks.length - 1; i >= 0 && entries.length < (limit || 8); i--) {
-        var block = blocks[i]
-        if (!block) continue
-
-        var stampMatch = block.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/)
-        var youMatch = block.match(/YOU: ([\s\S]*?)\n\nCLAUDE:/)
-        var claudeMatch = block.match(/CLAUDE: ([\s\S]*?)(?:\n\[saved:|$)/)
-        if (!youMatch || !claudeMatch) continue
-
-        var stamp = stampMatch ? stampMatch[1] : ""
-        entries.push({
-            time: stamp ? stamp.slice(11, 16) : "",
-            you: youMatch[1].trim(),
-            claude: claudeMatch[1].trim(),
-            saved: /\n\[saved: /.test(block)
-        })
-    }
-
-    return entries
-}
 
 // Collapse a reply to something that fits a panel row without hiding that it
 // was cut. Full text stays in the log and on the clipboard.

@@ -91,3 +91,26 @@ function trim(text, max) {
     var flat = String(text || "").replace(/\s+/g, " ").trim()
     return flat.length <= max ? flat : flat.slice(0, max).replace(/\s+\S*$/, "") + "…"
 }
+
+
+// "15 Sep 02:08 · 5 turns · live", the one line under a conversation title.
+function conversationMeta(entry) {
+    var bits = []
+
+    if (entry.startedAt) {
+        var when = new Date(entry.startedAt)
+        if (!isNaN(when.getTime())) {
+            var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            var today = new Date()
+            var sameDay = when.toDateString() === today.toDateString()
+            var clockPart = ("0" + when.getHours()).slice(-2) + ":" + ("0" + when.getMinutes()).slice(-2)
+            bits.push(sameDay ? "today " + clockPart
+                              : when.getDate() + " " + months[when.getMonth()] + " " + clockPart)
+        }
+    }
+
+    bits.push(entry.turns + (entry.turns === 1 ? " turn" : " turns"))
+    if (entry.live) bits.push("live")
+
+    return bits.join(" · ")
+}

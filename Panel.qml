@@ -15,6 +15,30 @@ Panel {
     property var service: null
 
     readonly property var barIdentity: hostWidget || root
+
+    // The panel is 693px wide, too narrow to put a list beside a reader, so it
+    // drills down instead: now -> list -> reading, with esc walking back out.
+    property string view: "now"
+    property var openedMeta: null
+
+    function showList() {
+        service.rescanConversations()
+        view = "list"
+    }
+
+    function showConversation(entry) {
+        openedMeta = entry
+        service.openConversation(entry.file, entry.live)
+        view = "reading"
+    }
+
+    function back() {
+        if (view === "reading") view = "list"
+        else if (view === "list") view = "now"
+        else close()
+    }
+
+    onOpenedChanged: if (!opened) view = "now"
     readonly property var pending: service ? service.pending : []
     readonly property var head: pending.length > 0 ? pending[0] : null
 
@@ -34,7 +58,7 @@ Panel {
         PanelKeyCatcher {
             id: keyCatcher
             anchors.fill: parent
-            onCloseRequested: root.close()
+            onCloseRequested: root.back()
             onTabRequested: function (direction) { root.switchPanel(direction) }
 
             // Approve and discard are reachable without the mouse, because the
@@ -72,7 +96,24 @@ Panel {
                         Row {
                             spacing: Style.space(8)
 
+                            // Back arrow, shown only where there is somewhere to go back to.
+                            Text {
+                                visible: root.view !== "now"
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "\uf053"
+                                font.family: Style.font.family
+                                font.pixelSize: Style.font.bodySmall
+                                color: Color.muted
+                                MouseArea {
+                                    anchors.fill: parent
+                                    anchors.margins: -Style.space(4)
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.back()
+                                }
+                            }
+
                             VoiceGlyph {
+                                visible: root.view === "now"
                                 anchors.verticalCenter: parent.verticalCenter
                                 state: service ? service.currentState : "idle"
                                 color: (service && service.currentState === "waiting") ? Color.urgent : Color.popups.text
@@ -81,7 +122,9 @@ Panel {
 
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: Model.describe(service ? service.currentState : "idle").label
+                                text: root.view === "list" ? "Conversations"
+                                    : root.view === "reading" ? Model.trim(root.openedMeta ? root.openedMeta.title : "", 46)
+                                    : Model.describe(service ? service.currentState : "idle").label
                                 font.family: Style.font.family
                                 font.pixelSize: Style.font.bodySmall
                                 color: Color.popups.text
@@ -123,7 +166,7 @@ Panel {
                 // ---------- pending write ----------
                 Loader {
                     width: parent.width
-                    active: root.head !== null
+                    active: root.view === "now" && root.head !== null
                     visible: active
                     sourceComponent: approvalCard
                 }
@@ -133,7 +176,7 @@ Panel {
                     width: parent.width
                     spacing: 0
                     bottomPadding: Style.space(10)
-                    visible: service && service.exchanges.length > 0
+                    visible: root.view === "now" && service && service.exchanges.length > 0
 
                     Text {
                         text: "CONVERSATION"
@@ -198,12 +241,162 @@ Panel {
                     }
                 }
 
+                // ---------- conversations ----------
+                Column {
+                    width: parent.width
+                    spacing: 0
+                    visible: root.view === "list"
+                    bottomPadding: Style.space(10)
+
+                    Repeater {
+                        model: root.view === "list" && service ? service.conversations : []
+
+                        Item {
+                            required property var modelData
+                            width: content.width
+                            height: entry.implicitHeight + Style.space(14)
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: modelData.live ? Util.alpha(Color.popups.text, 0.05) : "transparent"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.showConversation(modelData)
+                            }
+
+                            Row {
+                                id: entry
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: Style.space(14)
+                                anchors.rightMargin: Style.space(14)
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: Style.space(10)
+
+                                Text {
+                                    anchors.top: parent.top
+                                    anchors.topMargin: Style.space(2)
+                                    text: modelData.live ? "\u25cf" : "\u25cb"
+                                    font.pixelSize: Style.font.caption
+                                    color: modelData.live ? Color.popups.text : Color.muted
+                                }
+
+                                Column {
+                                    width: entry.width - Style.space(24)
+                                    spacing: Style.space(2)
+
+                                    Text {
+                                        width: parent.width
+                                        text: modelData.title
+                                        font.family: Style.font.family
+                                        font.pixelSize: Style.font.bodySmall
+                                        color: Color.popups.text
+                                        elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        text: Model.conversationMeta(modelData)
+                                        font.family: Style.font.family
+                                        font.pixelSize: Style.font.caption
+                                        font.features: ({ "tnum": 1 })
+                                        color: Color.muted
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible: !service || service.conversations.length === 0
+                        text: "nothing stored yet"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.bodySmall
+                        color: Color.muted
+                        leftPadding: Style.space(14)
+                        topPadding: Style.space(12)
+                        bottomPadding: Style.space(6)
+                    }
+                }
+
+                // ---------- reading one ----------
+                Column {
+                    width: parent.width
+                    spacing: 0
+                    visible: root.view === "reading"
+                    topPadding: Style.space(11)
+                    bottomPadding: Style.space(10)
+
+                    Repeater {
+                        model: root.view === "reading" && service ? service.opened : []
+
+                        Item {
+                            required property var modelData
+                            width: content.width
+                            height: turnCol.implicitHeight + Style.space(11)
+
+                            Row {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: Style.space(14)
+                                anchors.rightMargin: Style.space(14)
+                                anchors.top: parent.top
+                                spacing: Style.space(10)
+
+                                Text {
+                                    width: Style.space(34)
+                                    text: modelData.time
+                                    font.family: Style.font.family
+                                    font.pixelSize: Style.font.caption
+                                    font.features: ({ "tnum": 1 })
+                                    color: Color.muted
+                                }
+
+                                Column {
+                                    id: turnCol
+                                    width: content.width - Style.space(72)
+                                    spacing: Style.space(3)
+
+                                    Text {
+                                        width: parent.width
+                                        text: Model.trim(modelData.you, 150)
+                                        font.family: Style.font.family
+                                        font.pixelSize: Style.font.bodySmall
+                                        color: Color.popups.text
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        visible: modelData.claude !== ""
+                                        text: Model.trim(modelData.claude, 240)
+                                        font.family: Style.font.family
+                                        font.pixelSize: Style.font.bodySmall
+                                        color: Color.muted
+                                        wrapMode: Text.WordWrap
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible: !service || service.opened.length === 0
+                        text: "reading…"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.bodySmall
+                        color: Color.muted
+                        leftPadding: Style.space(14)
+                    }
+                }
+
                 Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
 
                 // ---------- ask by typing ----------
                 Item {
                     width: parent.width
-                    height: Style.space(44)
+                    visible: root.view === "now"
+                    height: visible ? Style.space(44) : 0
 
                     Row {
                         anchors.left: parent.left
@@ -250,12 +443,31 @@ Panel {
                         spacing: Style.space(8)
 
                         Button {
+                            visible: root.view === "now"
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "clear session"
                             onClicked: { service.clearSession(); root.close() }
                         }
                         Button {
+                            visible: root.view === "now"
+                            bordered: true
+                            fontSize: Style.font.bodySmall
+                            text: "conversations"
+                            onClicked: root.showList()
+                        }
+                        Button {
+                            visible: root.view === "reading" && root.openedMeta && !root.openedMeta.live
+                            bordered: true
+                            fontSize: Style.font.bodySmall
+                            text: "resume"
+                            onClicked: {
+                                service.resume(root.openedMeta.file)
+                                root.close()
+                            }
+                        }
+                        Button {
+                            visible: root.view === "now"
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "log"
@@ -267,7 +479,9 @@ Panel {
                         anchors.right: parent.right
                         anchors.rightMargin: Style.space(14)
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.head ? "enter approve · bksp discard" : "esc close · tab next panel"
+                        text: root.head ? "enter approve · bksp discard"
+                            : root.view === "now" ? "esc close · tab next panel"
+                            : "esc back"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         color: Color.muted

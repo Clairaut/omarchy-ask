@@ -2,7 +2,11 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// One Nerd Font glyph per state, drawn the way the rest of the bar draws icons:
+// One Nerd Font glyph per state. At rest it is a speech bubble rather than a
+// microphone, because the assistant takes typed input too; listening keeps the
+// microphone, since while recording that is literally what it is.
+//
+// Drawn the way the rest of the bar draws icons:
 // OpticalGlyph over Style.font.family, so this sits on the same baseline and
 // optical centre as the stock widgets rather than looking hand-placed.
 //
@@ -15,15 +19,15 @@ Item {
     property int size: Style.font.icon
 
     readonly property var glyphs: ({
-        "idle":         "",  // microphone
-        "listening":    "",  // microphone, lit by colour rather than shape
-        "transcribing": "",  // signal bars
-        "thinking":     "",  // spinner, the one state with no other progress cue
-        "tool":         "",  // cog
-        "waiting":      "",  // exclamation in a circle
-        "speaking":     "",  // speaker with waves
-        "failed":       "",  // microphone, struck through
-        "typing":       ""   // keyboard
+        "idle":         "\uf075",  // speech bubble: it takes voice or typing now
+        "listening":    "\uf130",  // microphone, because while recording it is one
+        "transcribing": "\uf012",  // signal bars
+        "thinking":     "\uf110",  // spinner, the one state with no other progress cue
+        "tool":         "\uf013",  // cog
+        "waiting":      "\uf06a",  // exclamation in a circle
+        "speaking":     "\uf028",  // speaker with waves
+        "failed":       "\uf131",  // microphone, struck through
+        "typing":       "\uf11c"   // keyboard
     })
 
     implicitWidth: size

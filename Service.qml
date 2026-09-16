@@ -223,9 +223,22 @@ Item {
         actionProc.running = true
     }
 
+    // clear ends the conversation without keeping it; log files it away so it
+    // stays readable in the conversations list.
     function clearSession() {
         actionProc.command = [root.binary, "--clear"]
         actionProc.running = true
+    }
+
+    function logSession() {
+        actionProc.command = [root.binary, "--log"]
+        actionProc.running = true
+    }
+
+    function forget(file) {
+        actionProc.command = [root.binary, "--forget", file]
+        actionProc.running = true
+        rescanConversations()
     }
 
     // Typing is sometimes the right input: a word whisper keeps mishearing, or

@@ -21,6 +21,60 @@ Panel {
     property string view: "now"
     property var openedMeta: null
 
+    // Keyboard cursor. One flat index per view, because the panel never shows
+    // two navigable regions at once: a parked write replaces the now view's
+    // controls, the list replaces both, and reading replaces the list.
+    property int cursor: 0
+
+    readonly property int cursorCount: {
+        if (head) return 2                                        // approve, discard
+        if (view === "list") return service ? service.conversations.length : 0
+        if (view === "reading") return (openedMeta && !openedMeta.live) ? 1 : 0
+        return 4                                                  // clear, log, conversations, ask
+    }
+
+    function moveCursor(step) {
+        if (cursorCount <= 0) return
+        cursor = (cursor + step + cursorCount) % cursorCount
+        // The ask field is the only item that takes text, so entering it means
+        // handing it real focus and letting it swallow keys until Escape.
+        if (view === "now" && !head && cursor === 3) askField.forceActiveFocus()
+        else if (askField.activeFocus) keyCatcher.forceActiveFocus()
+    }
+
+    function activateCursor() {
+        if (head) {
+            service.decide(head.id, cursor === 0)
+            return
+        }
+        if (view === "list") {
+            var items = service ? service.conversations : []
+            if (cursor >= 0 && cursor < items.length) showConversation(items[cursor])
+            return
+        }
+        if (view === "reading") {
+            if (openedMeta && !openedMeta.live) { service.resume(openedMeta.file); close() }
+            return
+        }
+        if (cursor === 0) { service.clearSession(); close() }
+        else if (cursor === 1) { service.logSession(); close() }
+        else if (cursor === 2) showList()
+        else askField.forceActiveFocus()
+    }
+
+    // Only an archived conversation can be forgotten. The live one is ended with
+    // clear, which is a different decision about a different thing.
+    function forgetUnderCursor() {
+        if (view !== "list" || !service) return
+        var items = service.conversations
+        if (cursor < 0 || cursor >= items.length) return
+        if (items[cursor].live) return
+        service.forget(items[cursor].file)
+        if (cursor >= items.length - 1) cursor = Math.max(0, cursor - 1)
+    }
+
+    onViewChanged: cursor = 0
+
     function showList() {
         service.rescanConversations()
         view = "list"
@@ -58,8 +112,15 @@ Panel {
         PanelKeyCatcher {
             id: keyCatcher
             anchors.fill: parent
+            // While the field has focus it owns every key, so arrows move the
+            // caret rather than the cursor and typing reaches the input.
+            blocked: askField.activeFocus
+
             onCloseRequested: root.back()
             onTabRequested: function (direction) { root.switchPanel(direction) }
+            onMoveRequested: function (dx, dy) { root.moveCursor(dy !== 0 ? dy : dx) }
+            onActivateRequested: root.activateCursor()
+            onDeleteRequested: root.forgetUnderCursor()
 
             // Approve and discard are reachable without the mouse, because the
             // whole point is answering without leaving what you were doing.
@@ -263,18 +324,21 @@ Panel {
 
                         Item {
                             required property var modelData
+                            required property int index
                             width: content.width
                             height: entry.implicitHeight + Style.space(14)
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: modelData.live ? Util.alpha(Color.popups.text, 0.05) : "transparent"
+                                color: index === root.cursor ? Util.alpha(Color.popups.text, 0.10)
+                                     : modelData.live ? Util.alpha(Color.popups.text, 0.05)
+                                     : "transparent"
                             }
 
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.showConversation(modelData)
+                                onClicked: { root.cursor = index; root.showConversation(modelData) }
                             }
 
                             Row {
@@ -452,18 +516,30 @@ Panel {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Style.space(8)
 
+                        // Order is the order they are reached by the keyboard:
+                        // clear, then log to its right, then the list.
                         Button {
                             visible: root.view === "now"
                             bordered: true
                             fontSize: Style.font.bodySmall
-                            text: "clear session"
+                            text: "clear"
+                            hasCursor: root.view === "now" && !root.head && root.cursor === 0
                             onClicked: { service.clearSession(); root.close() }
                         }
                         Button {
                             visible: root.view === "now"
                             bordered: true
                             fontSize: Style.font.bodySmall
+                            text: "log"
+                            hasCursor: root.view === "now" && !root.head && root.cursor === 1
+                            onClicked: { service.logSession(); root.close() }
+                        }
+                        Button {
+                            visible: root.view === "now"
+                            bordered: true
+                            fontSize: Style.font.bodySmall
                             text: "conversations"
+                            hasCursor: root.view === "now" && !root.head && root.cursor === 2
                             onClicked: root.showList()
                         }
                         Button {
@@ -471,17 +547,11 @@ Panel {
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "resume"
+                            hasCursor: root.view === "reading" && root.cursor === 0
                             onClicked: {
                                 service.resume(root.openedMeta.file)
                                 root.close()
                             }
-                        }
-                        Button {
-                            visible: root.view === "now"
-                            bordered: true
-                            fontSize: Style.font.bodySmall
-                            text: "log"
-                            onClicked: { service.openLog(); root.close() }
                         }
                     }
 
@@ -490,8 +560,9 @@ Panel {
                         anchors.rightMargin: Style.space(14)
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.head ? "enter approve · bksp discard"
-                            : root.view === "now" ? "esc close · tab next panel"
-                            : "esc back"
+                            : root.view === "list" ? "↑↓ move · enter open · del forget · esc back"
+                            : root.view === "reading" ? "esc back"
+                            : "↑↓ move · enter choose · esc close"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         color: Color.muted

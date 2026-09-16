@@ -1,0 +1,392 @@
+import QtQuick
+import Quickshell
+import qs.Commons
+import qs.Ui
+import "Model.js" as Model
+
+Panel {
+    id: root
+    moduleName: "clairaut.voice"
+    ipcTarget: "clairaut.voice"
+    manageIpc: true
+
+    property var anchorItem: null
+    property var hostWidget: null
+    property var service: null
+
+    readonly property var barIdentity: hostWidget || root
+    readonly property var pending: service ? service.pending : []
+    readonly property var head: pending.length > 0 ? pending[0] : null
+
+    function openFromHotkey() { open() }
+
+    KeyboardPanel {
+        id: panel
+        anchorItem: root.anchorItem
+        owner: root.barIdentity
+        bar: root.bar
+        open: root.opened
+        centerOnBar: false
+        focusTarget: keyCatcher
+        contentWidth: panel.fittedContentWidth(Style.space(520))
+        contentHeight: panel.fittedContentHeight(content.implicitHeight)
+
+        PanelKeyCatcher {
+            id: keyCatcher
+            anchors.fill: parent
+            onCloseRequested: root.close()
+            onTabRequested: function (direction) { root.switchPanel(direction) }
+
+            // Approve and discard are reachable without the mouse, because the
+            // whole point is answering without leaving what you were doing.
+            Keys.onPressed: function (event) {
+                if (!root.head) return
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    service.decide(root.head.id, true)
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete) {
+                    service.decide(root.head.id, false)
+                    event.accepted = true
+                }
+            }
+
+            Column {
+                id: content
+                width: parent.width
+                spacing: 0
+
+                // ---------- header ----------
+                Item {
+                    width: parent.width
+                    height: headerCol.implicitHeight + Style.space(20)
+
+                    Column {
+                        id: headerCol
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: Style.space(14)
+                        anchors.rightMargin: Style.space(14)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Style.space(3)
+
+                        Row {
+                            spacing: Style.space(8)
+
+                            VoiceGlyph {
+                                anchors.verticalCenter: parent.verticalCenter
+                                state: service ? service.currentState : "idle"
+                                color: (service && service.currentState === "waiting") ? Color.urgent : Color.popups.text
+                                size: Style.font.subtitle
+                            }
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: Model.describe(service ? service.currentState : "idle").label
+                                font.family: Style.font.family
+                                font.pixelSize: Style.font.bodySmall
+                                color: Color.popups.text
+                            }
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: {
+                                    if (!service) return ""
+                                    if (service.currentState === "waiting") return "nothing has been written yet"
+                                    if (service.currentState === "idle") return "super+h to speak, or type below"
+                                    return ""
+                                }
+                                font.family: Style.font.family
+                                font.pixelSize: Style.font.caption
+                                color: Color.muted
+                            }
+                        }
+
+                        Text {
+                            text: {
+                                if (!service) return ""
+                                var bits = []
+                                if (service.sessionAge > 0) bits.push("session " + Model.humanDuration(service.sessionAge) + " old")
+                                bits.push(service.turns + (service.turns === 1 ? " turn" : " turns"))
+                                if (service.pending.length === 0) bits.push("nothing pending")
+                                return bits.join(" · ")
+                            }
+                            font.family: Style.font.family
+                            font.pixelSize: Style.font.caption
+                            font.features: ({ "tnum": 1 })
+                            color: Color.muted
+                        }
+                    }
+                }
+
+                Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
+
+                // ---------- pending write ----------
+                Loader {
+                    width: parent.width
+                    active: root.head !== null
+                    visible: active
+                    sourceComponent: approvalCard
+                }
+
+                // ---------- conversation ----------
+                Column {
+                    width: parent.width
+                    spacing: 0
+                    bottomPadding: Style.space(10)
+                    visible: service && service.exchanges.length > 0
+
+                    Text {
+                        text: "CONVERSATION"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        font.letterSpacing: 1.4
+                        color: Color.muted
+                        leftPadding: Style.space(14)
+                        topPadding: Style.space(11)
+                        bottomPadding: Style.space(4)
+                    }
+
+                    Repeater {
+                        model: service ? service.exchanges : []
+
+                        Item {
+                            required property var modelData
+                            width: content.width
+                            height: exchange.implicitHeight + Style.space(9)
+
+                            Column {
+                                id: exchange
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: Style.space(14)
+                                anchors.rightMargin: Style.space(14)
+                                anchors.top: parent.top
+                                anchors.topMargin: Style.space(3)
+                                spacing: Style.space(2)
+
+                                Row {
+                                    spacing: Style.space(8)
+                                    Text {
+                                        width: Style.space(34)
+                                        text: modelData.time
+                                        font.family: Style.font.family
+                                        font.pixelSize: Style.font.caption
+                                        font.features: ({ "tnum": 1 })
+                                        color: Color.muted
+                                    }
+                                    Text {
+                                        width: exchange.width - Style.space(42)
+                                        text: Model.trim(modelData.you, 90)
+                                        font.family: Style.font.family
+                                        font.pixelSize: Style.font.bodySmall
+                                        color: Color.popups.text
+                                        wrapMode: Text.WordWrap
+                                    }
+                                }
+
+                                Text {
+                                    x: Style.space(42)
+                                    width: exchange.width - Style.space(42)
+                                    text: Model.trim(modelData.claude, 150)
+                                    font.family: Style.font.family
+                                    font.pixelSize: Style.font.bodySmall
+                                    color: Color.muted
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
+
+                // ---------- ask by typing ----------
+                Item {
+                    width: parent.width
+                    height: Style.space(44)
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: Style.space(14)
+                        anchors.rightMargin: Style.space(14)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Style.space(8)
+
+                        VoiceGlyph {
+                            anchors.verticalCenter: parent.verticalCenter
+                            state: "typing"
+                            color: Color.muted
+                            size: Style.font.body
+                        }
+
+                        TextField {
+                            id: askField
+                            width: parent.width - Style.space(30)
+                            anchors.verticalCenter: parent.verticalCenter
+                            foreground: Color.popups.text
+                            placeholderText: "ask without speaking"
+                            onAccepted: {
+                                if (service.ask(text)) {
+                                    text = ""
+                                    root.close()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
+
+                // ---------- footer ----------
+                Item {
+                    width: parent.width
+                    height: Style.space(48)
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Style.space(14)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Style.space(8)
+
+                        Button {
+                            bordered: true
+                            fontSize: Style.font.bodySmall
+                            text: "clear session"
+                            onClicked: { service.clearSession(); root.close() }
+                        }
+                        Button {
+                            bordered: true
+                            fontSize: Style.font.bodySmall
+                            text: "log"
+                            onClicked: { service.openLog(); root.close() }
+                        }
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: Style.space(14)
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.head ? "enter approve · bksp discard" : "esc close · tab next panel"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        color: Color.muted
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------- the write waiting on a person ----------
+    Component {
+        id: approvalCard
+
+        Column {
+            spacing: 0
+            bottomPadding: Style.space(12)
+
+            Text {
+                text: "WANTS TO WRITE"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.letterSpacing: 1.4
+                color: Color.urgent
+                leftPadding: Style.space(14)
+                topPadding: Style.space(11)
+                bottomPadding: Style.space(5)
+            }
+
+            Row {
+                leftPadding: Style.space(14)
+                spacing: Style.space(8)
+                bottomPadding: Style.space(6)
+
+                Text {
+                    text: root.head ? root.head.api + " · " + root.head.tool : ""
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.bodySmall
+                    color: Color.popups.text
+                }
+                Text {
+                    text: root.head ? root.head.method : ""
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.urgent
+                }
+            }
+
+            Repeater {
+                model: {
+                    if (!root.head || !root.head.arguments) return []
+                    var rows = []
+                    for (var key in root.head.arguments)
+                        rows.push({ key: key, value: String(root.head.arguments[key]) })
+                    return rows
+                }
+
+                Row {
+                    required property var modelData
+                    leftPadding: Style.space(14)
+                    spacing: Style.space(10)
+                    height: Style.space(19)
+
+                    Text {
+                        width: Style.space(72)
+                        text: modelData.key
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        color: Color.muted
+                    }
+                    Text {
+                        text: modelData.value
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.bodySmall
+                        font.features: ({ "tnum": 1 })
+                        color: Color.popups.text
+                    }
+                }
+            }
+
+            // The transcript is the point: it shows the words that produced the
+            // call, which is what you are actually judging.
+            Text {
+                visible: root.head && root.head.transcript
+                leftPadding: Style.space(14)
+                rightPadding: Style.space(14)
+                topPadding: Style.space(8)
+                width: content.width
+                text: root.head ? "heard: “" + Model.trim(root.head.transcript, 110) + "”" : ""
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                color: Color.muted
+                wrapMode: Text.WordWrap
+            }
+
+            Row {
+                leftPadding: Style.space(14)
+                topPadding: Style.space(10)
+                spacing: Style.space(8)
+
+                Button {
+                    bordered: true
+                    fontSize: Style.font.bodySmall
+                    text: "approve"
+                    onClicked: if (root.head) service.decide(root.head.id, true)
+                }
+                Button {
+                    bordered: true
+                    fontSize: Style.font.bodySmall
+                    text: "discard"
+                    onClicked: if (root.head) service.decide(root.head.id, false)
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.head ? "expires in " + Model.humanDuration(Math.max(0, root.head.expires_at - service.now)) : ""
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Color.muted
+                }
+            }
+        }
+    }
+}

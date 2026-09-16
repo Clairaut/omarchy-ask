@@ -60,7 +60,7 @@ BarWidget {
             if (root.state === "waiting")
                 return service.pending.length + " write waiting on you, click to review"
             if (root.state === "idle")
-                return "Voice assistant: " + service.turns + " turns" +
+                return "AI Assistant: " + service.turns + " turns" +
                        (service.sessionAge > 0 ? ", " + Model.humanDuration(service.sessionAge) + " old" : "")
             return root.tone.label + (service.state && service.state.detail
                 ? ": " + Model.trim(service.state.detail, 60) : "")

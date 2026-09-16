@@ -120,21 +120,15 @@ Panel {
             onTabRequested: function (direction) { root.switchPanel(direction) }
             onMoveRequested: function (dx, dy) { root.moveCursor(dy !== 0 ? dy : dx) }
             onActivateRequested: root.activateCursor()
-            onDeleteRequested: root.forgetUnderCursor()
+            // x discards a parked write outright, and forgets an archived
+            // conversation. Both are "get rid of the thing in front of me".
+            onDeleteRequested: {
+                if (root.head) service.decide(root.head.id, false)
+                else root.forgetUnderCursor()
+            }
 
             // Approve and discard are reachable without the mouse, because the
             // whole point is answering without leaving what you were doing.
-            Keys.onPressed: function (event) {
-                if (!root.head) return
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    service.decide(root.head.id, true)
-                    event.accepted = true
-                } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete) {
-                    service.decide(root.head.id, false)
-                    event.accepted = true
-                }
-            }
-
             Column {
                 id: content
                 width: parent.width
@@ -559,9 +553,9 @@ Panel {
                         anchors.right: parent.right
                         anchors.rightMargin: Style.space(14)
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.head ? "enter approve · bksp discard"
-                            : root.view === "list" ? "↑↓ move · enter open · del forget · esc back"
-                            : root.view === "reading" ? "esc back"
+                        text: root.head ? "enter approve · x discard"
+                            : root.view === "list" ? "↑↓ move · enter open · x forget · esc back"
+                            : root.view === "reading" ? "enter resume · esc back"
                             : "↑↓ move · enter choose · esc close"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
@@ -666,12 +660,14 @@ Panel {
                     bordered: true
                     fontSize: Style.font.bodySmall
                     text: "approve"
+                    hasCursor: root.head && root.cursor === 0
                     onClicked: if (root.head) service.decide(root.head.id, true)
                 }
                 Button {
                     bordered: true
                     fontSize: Style.font.bodySmall
                     text: "discard"
+                    hasCursor: root.head && root.cursor === 1
                     onClicked: if (root.head) service.decide(root.head.id, false)
                 }
                 Text {

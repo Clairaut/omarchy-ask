@@ -32,12 +32,13 @@ Panel {
     readonly property int exchangeCount: (view === "now" && !head && service)
         ? service.exchanges.length : 0
     property int expanded: -1
+    readonly property string muteHint: (service && service.muted) ? "m unmute" : "m mute"
 
     readonly property int cursorCount: {
         if (head) return 2                                        // approve, discard
         if (view === "list") return service ? service.conversations.length : 0
         if (view === "reading") return (openedMeta && !openedMeta.live) ? 1 : 0
-        return exchangeCount + 5          // exchanges, ask, clear, log, mute, conversations
+        return exchangeCount + 4                // exchanges, ask, clear, log, conversations
     }
 
     function moveCursor(step) {
@@ -71,7 +72,6 @@ Panel {
         if (action === 0) askField.forceActiveFocus()
         else if (action === 1) { service.clearSession(); close() }
         else if (action === 2) { service.logSession(); close() }
-        else if (action === 3) service.toggleMute()
         else showList()
     }
 
@@ -538,6 +538,25 @@ Panel {
                                     root.close()
                                 }
                             }
+
+                            // The key catcher gives up on every key while this
+                            // has focus, so escape and the vertical arrows have
+                            // to be caught here or the field is a dead end you
+                            // can only leave with the mouse. Left and right are
+                            // left alone: they move the caret, which is what
+                            // they should do in a field.
+                            Keys.onEscapePressed: function (event) {
+                                keyCatcher.forceActiveFocus()
+                                event.accepted = true
+                            }
+                            Keys.onUpPressed: function (event) {
+                                root.moveCursor(-1)
+                                event.accepted = true
+                            }
+                            Keys.onDownPressed: function (event) {
+                                root.moveCursor(1)
+                                event.accepted = true
+                            }
                         }
                     }
                 }
@@ -577,16 +596,8 @@ Panel {
                             visible: root.view === "now"
                             bordered: true
                             fontSize: Style.font.bodySmall
-                            text: service && service.muted ? "muted" : "mute"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 3
-                            onClicked: service.toggleMute()
-                        }
-                        Button {
-                            visible: root.view === "now"
-                            bordered: true
-                            fontSize: Style.font.bodySmall
                             text: "conversations"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 4
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 3
                             onClicked: root.showList()
                         }
                         Button {
@@ -613,8 +624,8 @@ Panel {
                                     ? "enter resume · esc back"
                                     : "esc back")
                             : root.cursor < root.exchangeCount
-                                ? "↑↓ move · enter expand · m mute · esc close"
-                                : "↑↓ move · enter choose · m mute · esc close"
+                                ? "↑↓ move · enter expand · " + root.muteHint + " · esc close"
+                                : "↑↓ move · enter choose · " + root.muteHint + " · esc close"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         color: Color.muted

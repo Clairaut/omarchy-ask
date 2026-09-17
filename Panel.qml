@@ -37,7 +37,7 @@ Panel {
         if (head) return 2                                        // approve, discard
         if (view === "list") return service ? service.conversations.length : 0
         if (view === "reading") return (openedMeta && !openedMeta.live) ? 1 : 0
-        return exchangeCount + 4                // exchanges, clear, log, conversations, ask
+        return exchangeCount + 5          // exchanges, ask, clear, log, mute, conversations
     }
 
     function moveCursor(step) {
@@ -45,7 +45,7 @@ Panel {
         cursor = (cursor + step + cursorCount) % cursorCount
         // The ask field is the only item that takes text, so entering it means
         // handing it real focus and letting it swallow keys until Escape.
-        if (view === "now" && !head && cursor === exchangeCount + 3) askField.forceActiveFocus()
+        if (view === "now" && !head && cursor === exchangeCount) askField.forceActiveFocus()
         else if (askField.activeFocus) keyCatcher.forceActiveFocus()
     }
 
@@ -68,10 +68,11 @@ Panel {
             return
         }
         var action = cursor - exchangeCount
-        if (action === 0) { service.clearSession(); close() }
-        else if (action === 1) { service.logSession(); close() }
-        else if (action === 2) showList()
-        else askField.forceActiveFocus()
+        if (action === 0) askField.forceActiveFocus()
+        else if (action === 1) { service.clearSession(); close() }
+        else if (action === 2) { service.logSession(); close() }
+        else if (action === 3) service.toggleMute()
+        else showList()
     }
 
     // Only an archived conversation can be forgotten. The live one is ended with
@@ -142,6 +143,12 @@ Panel {
             onDeleteRequested: {
                 if (root.head) service.decide(root.head.id, false)
                 else root.forgetUnderCursor()
+            }
+            // m silences the speaker. It is not tied to the cursor because it
+            // is about the answer coming back, not about the thing in front of
+            // you, and it is the key you want while something is talking.
+            onTextKey: function (text) {
+                if (text === "m" || text === "M") service.toggleMute()
             }
 
             // Approve and discard are reachable without the mouse, because the
@@ -555,7 +562,7 @@ Panel {
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "clear"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 1
                             onClicked: { service.clearSession(); root.close() }
                         }
                         Button {
@@ -563,15 +570,23 @@ Panel {
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "log"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 1
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 2
                             onClicked: { service.logSession(); root.close() }
                         }
                         Button {
                             visible: root.view === "now"
                             bordered: true
                             fontSize: Style.font.bodySmall
+                            text: service && service.muted ? "muted" : "mute"
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 3
+                            onClicked: service.toggleMute()
+                        }
+                        Button {
+                            visible: root.view === "now"
+                            bordered: true
+                            fontSize: Style.font.bodySmall
                             text: "conversations"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 2
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 4
                             onClicked: root.showList()
                         }
                         Button {
@@ -598,8 +613,8 @@ Panel {
                                     ? "enter resume · esc back"
                                     : "esc back")
                             : root.cursor < root.exchangeCount
-                                ? "↑↓ move · enter expand · esc close"
-                                : "↑↓ move · enter choose · esc close"
+                                ? "↑↓ move · enter expand · m mute · esc close"
+                                : "↑↓ move · enter choose · m mute · esc close"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         color: Color.muted

@@ -25,6 +25,7 @@ Item {
     property var conversations: []
     property var state: null
     property var pending: []
+    property bool muted: false
     property var exchanges: []
     property int now: 0
 
@@ -48,6 +49,23 @@ Item {
         onFileChanged: reload()
         onLoaded: root.state = Model.parseState(text())
         onLoadFailed: root.state = null
+    }
+
+    // ---------- muted ----------
+    // A flag file rather than a field in state.json, because it is toggled when
+    // the script is not running and state.json is only written when it is.
+    FileView {
+        id: muteFlag
+        path: root.runtimeDir + "/muted"
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.muted = true
+        onLoadFailed: root.muted = false
+    }
+
+    function toggleMute() {
+        actionProc.command = [root.binary, "--mute"]
+        actionProc.running = true
     }
 
     // ---------- the current conversation ----------
@@ -114,6 +132,7 @@ Item {
         onTriggered: {
             root.now = Math.floor(Date.now() / 1000)
             stateFile.reload()
+            muteFlag.reload()
             if (!queueScan.running) queueScan.running = true
         }
     }

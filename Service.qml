@@ -36,7 +36,12 @@ Item {
     readonly property int stateAge: (state && state.at) ? Math.max(0, now - state.at) : 0
 
     // ---------- current state ----------
+    // The script writes this file by renaming a temp file over it, so the watch
+    // ends up holding an inode that no longer exists and stops firing after the
+    // first write. watchChanges is kept for the case where it does fire; the
+    // reload on the tick below is what actually keeps this current.
     FileView {
+        id: stateFile
         path: root.runtimeDir + "/state.json"
         watchChanges: true
         printErrors: false
@@ -108,6 +113,7 @@ Item {
         triggeredOnStart: true
         onTriggered: {
             root.now = Math.floor(Date.now() / 1000)
+            stateFile.reload()
             if (!queueScan.running) queueScan.running = true
         }
     }

@@ -555,7 +555,10 @@ Panel {
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.head ? "enter approve · x discard"
                             : root.view === "list" ? "↑↓ move · enter open · x forget · esc back"
-                            : root.view === "reading" ? "enter resume · esc back"
+                            : root.view === "reading"
+                                ? ((root.openedMeta && !root.openedMeta.live)
+                                    ? "enter resume · esc back"
+                                    : "esc back")
                             : "↑↓ move · enter choose · esc close"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption

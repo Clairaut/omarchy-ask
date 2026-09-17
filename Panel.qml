@@ -17,27 +17,37 @@ Panel {
     readonly property var barIdentity: hostWidget || root
 
     // The panel is 693px wide, too narrow to put a list beside a reader, so it
-    // drills down instead: now -> list -> reading, with esc walking back out.
+    // drills down instead: now -> list, with esc walking back out. There is no
+    // third view for reading one: an archive opens in the session section,
+    // which is the same list of turns and already knows how to expand them.
     property string view: "now"
     property var openedMeta: null
 
     // Keyboard cursor. One flat index per view, because the panel never shows
     // two navigable regions at once: a parked write replaces the now view's
-    // controls, the list replaces both, and reading replaces the list.
+    // controls, and the list replaces both.
     property int cursor: 0
 
     // The now view's exchanges come first, so the cursor walks the panel top to
     // bottom: newest exchange down to the ask field. It also keeps clear off the
     // first keypress, which enter used to reach straight away.
-    readonly property int exchangeCount: (view === "now" && !head && service)
-        ? service.exchanges.length : 0
+    readonly property int exchangeCount: (view === "now" && !head) ? sessionTurns.length : 0
     property int expanded: -1
     readonly property string muteHint: (service && service.muted) ? "m unmute" : "m mute"
+
+    // An archived conversation is read in the session section rather than a
+    // panel of its own: it is the same thing, a list of turns, and the session
+    // section is the one that can expand them.
+    readonly property bool readingArchive: openedMeta !== null && !openedMeta.live
+    readonly property var sessionTurns: !service ? []
+        : (readingArchive ? service.opened : service.exchanges)
 
     readonly property int cursorCount: {
         if (head) return 2                                        // approve, discard
         if (view === "list") return service ? service.conversations.length : 0
-        if (view === "reading") return (openedMeta && !openedMeta.live) ? 1 : 0
+        // Reading an archive, the only action is resuming it: asking, clearing
+        // and logging all belong to the live conversation, not this one.
+        if (readingArchive) return exchangeCount + 1
         return exchangeCount + 4                // exchanges, ask, clear, log, conversations
     }
 
@@ -46,7 +56,7 @@ Panel {
         cursor = (cursor + step + cursorCount) % cursorCount
         // The ask field is the only item that takes text, so entering it means
         // handing it real focus and letting it swallow keys until Escape.
-        if (view === "now" && !head && cursor === exchangeCount) askField.forceActiveFocus()
+        if (view === "now" && !head && !readingArchive && cursor === exchangeCount) askField.forceActiveFocus()
         else if (askField.activeFocus) keyCatcher.forceActiveFocus()
     }
 
@@ -60,15 +70,15 @@ Panel {
             if (cursor >= 0 && cursor < items.length) showConversation(items[cursor])
             return
         }
-        if (view === "reading") {
-            if (openedMeta && !openedMeta.live) { service.resume(openedMeta.file); close() }
-            return
-        }
         if (cursor < exchangeCount) {
             expanded = (expanded === cursor) ? -1 : cursor
             return
         }
         var action = cursor - exchangeCount
+        if (readingArchive) {
+            if (action === 0) { service.resume(openedMeta.file); close() }
+            return
+        }
         if (action === 0) askField.forceActiveFocus()
         else if (action === 1) { service.clearSession(); close() }
         else if (action === 2) { service.logSession(); close() }
@@ -99,18 +109,24 @@ Panel {
     }
 
     function showConversation(entry) {
+        // The live one is already what the session section shows.
+        if (entry.live) {
+            openedMeta = null
+            view = "now"
+            return
+        }
         openedMeta = entry
         service.openConversation(entry.file, entry.live)
-        view = "reading"
+        view = "now"
     }
 
     function back() {
-        if (view === "reading") view = "list"
+        if (readingArchive) { openedMeta = null; view = "list" }
         else if (view === "list") view = "now"
         else close()
     }
 
-    onOpenedChanged: if (!opened) view = "now"
+    onOpenedChanged: if (!opened) { view = "now"; openedMeta = null }
     readonly property var pending: service ? service.pending : []
     readonly property var head: pending.length > 0 ? pending[0] : null
 
@@ -202,7 +218,7 @@ Panel {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: root.view === "list" ? "Conversations"
-                                    : root.view === "reading" ? Model.trim(root.openedMeta ? root.openedMeta.title : "", 46)
+                                    : root.readingArchive ? Model.trim(root.openedMeta.title, 46)
                                     : Model.describe(service ? service.currentState : "idle").label
                                 font.family: Style.font.family
                                 font.pixelSize: Style.font.bodySmall
@@ -258,7 +274,7 @@ Panel {
                     visible: root.view === "now"
 
                     Text {
-                        text: "THIS SESSION"
+                        text: root.readingArchive ? "ARCHIVED" : "THIS SESSION"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         font.letterSpacing: 1.4
@@ -269,8 +285,8 @@ Panel {
                     }
 
                     Text {
-                        visible: !service || service.exchanges.length === 0
-                        text: "nothing asked yet in this session"
+                        visible: root.sessionTurns.length === 0
+                        text: root.readingArchive ? "reading…" : "nothing asked yet in this session"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.bodySmall
                         color: Color.muted
@@ -279,7 +295,7 @@ Panel {
                     }
 
                     Repeater {
-                        model: service ? service.exchanges : []
+                        model: root.sessionTurns
 
                         Item {
                             id: turn
@@ -433,82 +449,12 @@ Panel {
                     }
                 }
 
-                // ---------- reading one ----------
-                Column {
-                    width: parent.width
-                    spacing: 0
-                    visible: root.view === "reading"
-                    topPadding: Style.space(11)
-                    bottomPadding: Style.space(10)
-
-                    Repeater {
-                        model: root.view === "reading" && service ? service.opened : []
-
-                        Item {
-                            required property var modelData
-                            width: content.width
-                            height: turnCol.implicitHeight + Style.space(11)
-
-                            Row {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.leftMargin: Style.space(14)
-                                anchors.rightMargin: Style.space(14)
-                                anchors.top: parent.top
-                                spacing: Style.space(10)
-
-                                Text {
-                                    width: Style.space(34)
-                                    text: modelData.time
-                                    font.family: Style.font.family
-                                    font.pixelSize: Style.font.caption
-                                    font.features: ({ "tnum": 1 })
-                                    color: Color.muted
-                                }
-
-                                Column {
-                                    id: turnCol
-                                    width: content.width - Style.space(72)
-                                    spacing: Style.space(3)
-
-                                    Text {
-                                        width: parent.width
-                                        text: Model.trim(modelData.you, 150)
-                                        font.family: Style.font.family
-                                        font.pixelSize: Style.font.bodySmall
-                                        color: Color.popups.text
-                                        wrapMode: Text.WordWrap
-                                    }
-                                    Text {
-                                        width: parent.width
-                                        visible: modelData.claude !== ""
-                                        text: Model.trim(modelData.claude, 240)
-                                        font.family: Style.font.family
-                                        font.pixelSize: Style.font.bodySmall
-                                        color: Color.muted
-                                        wrapMode: Text.WordWrap
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Text {
-                        visible: !service || service.opened.length === 0
-                        text: "reading…"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.bodySmall
-                        color: Color.muted
-                        leftPadding: Style.space(14)
-                    }
-                }
-
                 Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
 
                 // ---------- ask by typing ----------
                 Item {
                     width: parent.width
-                    visible: root.view === "now"
+                    visible: root.view === "now" && !root.readingArchive
                     height: visible ? Style.space(44) : 0
 
                     Row {
@@ -578,7 +524,7 @@ Panel {
                         // Order is the order they are reached by the keyboard:
                         // clear, then log to its right, then the list.
                         Button {
-                            visible: root.view === "now"
+                            visible: root.view === "now" && !root.readingArchive
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "clear"
@@ -586,7 +532,7 @@ Panel {
                             onClicked: { service.clearSession(); root.close() }
                         }
                         Button {
-                            visible: root.view === "now"
+                            visible: root.view === "now" && !root.readingArchive
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "log"
@@ -594,7 +540,7 @@ Panel {
                             onClicked: { service.logSession(); root.close() }
                         }
                         Button {
-                            visible: root.view === "now"
+                            visible: root.view === "now" && !root.readingArchive
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "conversations"
@@ -602,11 +548,11 @@ Panel {
                             onClicked: root.showList()
                         }
                         Button {
-                            visible: root.view === "reading" && root.openedMeta && !root.openedMeta.live
+                            visible: root.readingArchive
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "resume"
-                            hasCursor: root.view === "reading" && root.cursor === 0
+                            hasCursor: root.readingArchive && root.cursor === root.exchangeCount
                             onClicked: {
                                 service.resume(root.openedMeta.file)
                                 root.close()
@@ -623,10 +569,10 @@ Panel {
                         anchors.bottomMargin: Style.space(9)
                         text: root.head ? "enter approve · x discard"
                             : root.view === "list" ? "↑↓ move · enter open · x forget · esc back"
-                            : root.view === "reading"
-                                ? ((root.openedMeta && !root.openedMeta.live)
-                                    ? "enter resume · esc back"
-                                    : "esc back")
+                            : root.readingArchive
+                                ? (root.cursor < root.exchangeCount
+                                    ? "↑↓ move · enter expand · esc back"
+                                    : "↑↓ move · enter resume · esc back")
                             : root.cursor < root.exchangeCount
                                 ? "↑↓ move · enter expand · " + root.muteHint + " · esc close"
                                 : "↑↓ move · enter choose · " + root.muteHint + " · esc close"

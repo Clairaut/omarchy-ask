@@ -147,7 +147,10 @@ Item {
             "for f in " + root.projectDir + "/*.jsonl " + root.projectDir + "/archive/*.jsonl; do " +
             "[ -f \"$f\" ] || continue; " +
             "case \"$f\" in */archive/*) live=0 ;; *) live=1 ;; esac; " +
-            "turns=$(grep -c '\"type\":\"user\"' \"$f\" 2>/dev/null || echo 0); " +
+            // Tool results are recorded as user messages too, so counting every
+            // one of them would report a conversation as longer than it reads.
+            // A real turn is the one carrying text rather than a result block.
+            "turns=$(grep '\"type\":\"user\"' \"$f\" 2>/dev/null | grep -c '\"content\":\"' || echo 0); " +
             "ts=$(grep -o '\"timestamp\":\"[^\"]*\"' \"$f\" 2>/dev/null | head -1 | cut -d'\"' -f4); " +
             // "content":" is eleven characters, so the text starts at twelve; the prompt
             // also carries escaped newlines, and only the first line is a usable title.
@@ -195,7 +198,9 @@ Item {
         property string file: ""
         stdout: StdioCollector {
             waitForEnd: true
-            onStreamFinished: root.opened = root.parseTranscript(text)
+            // Newest first, the same way the session reads, since both now render
+                // through the one list.
+                onStreamFinished: root.opened = root.parseTranscript(text).reverse()
         }
     }
 

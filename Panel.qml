@@ -566,12 +566,13 @@ Panel {
                 // ---------- footer ----------
                 Item {
                     width: parent.width
-                    height: Style.space(48)
+                    height: Style.space(68)
 
                     Row {
                         anchors.left: parent.left
                         anchors.leftMargin: Style.space(14)
-                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: Style.space(11)
                         spacing: Style.space(8)
 
                         // Order is the order they are reached by the keyboard:
@@ -613,10 +614,13 @@ Panel {
                         }
                     }
 
+                    // Under the buttons rather than beside them: it describes
+                    // the keyboard, which reaches more than the buttons do.
                     Text {
-                        anchors.right: parent.right
-                        anchors.rightMargin: Style.space(14)
-                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: Style.space(14)
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: Style.space(9)
                         text: root.head ? "enter approve · x discard"
                             : root.view === "list" ? "↑↓ move · enter open · x forget · esc back"
                             : root.view === "reading"

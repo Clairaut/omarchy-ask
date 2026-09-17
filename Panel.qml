@@ -26,11 +26,18 @@ Panel {
     // controls, the list replaces both, and reading replaces the list.
     property int cursor: 0
 
+    // The now view's exchanges come first, so the cursor walks the panel top to
+    // bottom: newest exchange down to the ask field. It also keeps clear off the
+    // first keypress, which enter used to reach straight away.
+    readonly property int exchangeCount: (view === "now" && !head && service)
+        ? service.exchanges.length : 0
+    property int expanded: -1
+
     readonly property int cursorCount: {
         if (head) return 2                                        // approve, discard
         if (view === "list") return service ? service.conversations.length : 0
         if (view === "reading") return (openedMeta && !openedMeta.live) ? 1 : 0
-        return 4                                                  // clear, log, conversations, ask
+        return exchangeCount + 4                // exchanges, clear, log, conversations, ask
     }
 
     function moveCursor(step) {
@@ -38,7 +45,7 @@ Panel {
         cursor = (cursor + step + cursorCount) % cursorCount
         // The ask field is the only item that takes text, so entering it means
         // handing it real focus and letting it swallow keys until Escape.
-        if (view === "now" && !head && cursor === 3) askField.forceActiveFocus()
+        if (view === "now" && !head && cursor === exchangeCount + 3) askField.forceActiveFocus()
         else if (askField.activeFocus) keyCatcher.forceActiveFocus()
     }
 
@@ -56,9 +63,14 @@ Panel {
             if (openedMeta && !openedMeta.live) { service.resume(openedMeta.file); close() }
             return
         }
-        if (cursor === 0) { service.clearSession(); close() }
-        else if (cursor === 1) { service.logSession(); close() }
-        else if (cursor === 2) showList()
+        if (cursor < exchangeCount) {
+            expanded = (expanded === cursor) ? -1 : cursor
+            return
+        }
+        var action = cursor - exchangeCount
+        if (action === 0) { service.clearSession(); close() }
+        else if (action === 1) { service.logSession(); close() }
+        else if (action === 2) showList()
         else askField.forceActiveFocus()
     }
 
@@ -73,7 +85,12 @@ Panel {
         if (cursor >= items.length - 1) cursor = Math.max(0, cursor - 1)
     }
 
-    onViewChanged: cursor = 0
+    onViewChanged: { cursor = 0; expanded = -1 }
+
+    Connections {
+        target: root.service
+        function onExchangesChanged() { root.expanded = -1 }
+    }
 
     function showList() {
         service.rescanConversations()
@@ -258,9 +275,27 @@ Panel {
                         model: service ? service.exchanges : []
 
                         Item {
+                            id: turn
                             required property var modelData
+                            required property int index
+                            readonly property bool open: index === root.expanded
                             width: content.width
                             height: exchange.implicitHeight + Style.space(9)
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: index === root.cursor ? Util.alpha(Color.popups.text, 0.10)
+                                     : "transparent"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.cursor = turn.index
+                                    root.expanded = turn.open ? -1 : turn.index
+                                }
+                            }
 
                             Column {
                                 id: exchange
@@ -284,7 +319,8 @@ Panel {
                                     }
                                     Text {
                                         width: exchange.width - Style.space(42)
-                                        text: Model.trim(modelData.you, 90)
+                                        text: turn.open
+                                            ? modelData.you : Model.trim(modelData.you, 90)
                                         font.family: Style.font.family
                                         font.pixelSize: Style.font.bodySmall
                                         color: Color.popups.text
@@ -295,7 +331,9 @@ Panel {
                                 Text {
                                     x: Style.space(42)
                                     width: exchange.width - Style.space(42)
-                                    text: Model.trim(modelData.claude, 150)
+                                    text: (turn.open ? "\u25be  " : "\u25b8  ")
+                                        + (turn.open ? modelData.claude
+                                                     : Model.trim(modelData.claude, 150))
                                     font.family: Style.font.family
                                     font.pixelSize: Style.font.bodySmall
                                     color: Color.muted
@@ -517,7 +555,7 @@ Panel {
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "clear"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === 0
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount
                             onClicked: { service.clearSession(); root.close() }
                         }
                         Button {
@@ -525,7 +563,7 @@ Panel {
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "log"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === 1
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 1
                             onClicked: { service.logSession(); root.close() }
                         }
                         Button {
@@ -533,7 +571,7 @@ Panel {
                             bordered: true
                             fontSize: Style.font.bodySmall
                             text: "conversations"
-                            hasCursor: root.view === "now" && !root.head && root.cursor === 2
+                            hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 2
                             onClicked: root.showList()
                         }
                         Button {
@@ -559,7 +597,9 @@ Panel {
                                 ? ((root.openedMeta && !root.openedMeta.live)
                                     ? "enter resume · esc back"
                                     : "esc back")
-                            : "↑↓ move · enter choose · esc close"
+                            : root.cursor < root.exchangeCount
+                                ? "↑↓ move · enter expand · esc close"
+                                : "↑↓ move · enter choose · esc close"
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
                         color: Color.muted

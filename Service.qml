@@ -12,6 +12,14 @@ import "Model.js" as Model
 Item {
     id: root
 
+    // The host keeps a service loaded while the plugin is enabled, widget or no
+    // widget, so poll only while something is actually reading. Widgets attach on
+    // resolve and detach on destruction.
+    property int consumers: 0
+
+    function attach() { root.consumers++ }
+    function detach() { if (root.consumers > 0) root.consumers-- }
+
     readonly property string runtimeDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/ask"
     readonly property string queueDir: runtimeDir + "/queue"
     readonly property string logPath: Quickshell.env("HOME") + "/.local/share/ask/log.txt"
@@ -91,7 +99,7 @@ Item {
 
     // A completed turn is the only thing that changes the current conversation.
     onTurnsChanged: refreshCurrent()
-    Component.onCompleted: refreshCurrent()
+    onConsumersChanged: if (root.consumers === 1) refreshCurrent()
 
     // ---------- approval queue ----------
     // A directory cannot be watched the way a file can, so it is polled. One
@@ -126,7 +134,7 @@ Item {
 
     Timer {
         interval: 1000
-        running: true
+        running: root.consumers > 0
         repeat: true
         triggeredOnStart: true
         onTriggered: {

@@ -6,10 +6,12 @@
   "author": "clairaut",
   "description": "Dashboard for the SUPER+H assistant: what it is doing, what it has said, and any write waiting on approval",
   "kinds": [
-    "bar-widget"
+    "bar-widget",
+    "service"
   ],
   "entryPoints": {
-    "barWidget": "BarWidget.qml"
+    "barWidget": "BarWidget.qml",
+    "service": "Service.qml"
   },
   "barWidget": {
     "displayName": "Ask",

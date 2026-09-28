@@ -11,8 +11,32 @@ BarWidget {
     id: root
     moduleName: "clairaut.ask"
 
-    readonly property var service: askService
-    readonly property string state: service.currentState
+    // The pollers live in the plugin's service entry point, so one instance serves
+    // every screen instead of one per bar. The host injects `bar` on a later tick
+    // and creates services on its own schedule, so resolve on both and retry.
+    property var service: null
+    readonly property string state: service ? service.currentState : "idle"
+
+    function resolveService() {
+        var shellApi = root.bar ? root.bar.shell : null
+        var next = (shellApi && typeof shellApi.serviceFor === "function")
+            ? shellApi.serviceFor(root.moduleName) : null
+        if (next === root.service) return
+        if (root.service) root.service.detach()
+        root.service = next
+        if (root.service) root.service.attach()
+    }
+
+    onBarChanged: resolveService()
+    Component.onCompleted: resolveService()
+    Component.onDestruction: if (root.service) root.service.detach()
+
+    Timer {
+        interval: 500
+        repeat: true
+        running: root.service === null
+        onTriggered: root.resolveService()
+    }
     readonly property var tone: Model.describe(state)
 
     // One colour rule: only a request that needs a person changes hue. Everything
@@ -28,14 +52,13 @@ BarWidget {
     readonly property int slotWidth: Style.space(58)
 
     readonly property string trailing: {
+        if (!service) return ""
         if (state === "waiting") return String(service.pending.length)
         if (state === "listening" || state === "speaking") return Model.clock(service.stateAge)
         if (state === "thinking" || state === "transcribing") return service.stateAge + "s"
         if (state === "failed") return "!"
         return String(service.turns)
     }
-
-    Service { id: askService }
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
@@ -57,6 +80,7 @@ BarWidget {
         hasVisualContent: true
         fixedWidth: root.slotWidth
         tooltipText: {
+            if (!service) return "AI Assistant"
             if (root.state === "waiting")
                 return service.pending.length + " write waiting on you, click to review"
             if (root.state === "idle")

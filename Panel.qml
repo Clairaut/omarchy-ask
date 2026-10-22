@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
@@ -140,7 +140,7 @@ Panel {
         open: root.opened
         centerOnBar: false
         focusTarget: keyCatcher
-        contentWidth: panel.fittedContentWidth(Style.space(520))
+        contentWidth: panel.fittedContentWidth(Commons.Style.space(520))
         contentHeight: panel.fittedContentHeight(content.implicitHeight)
 
         PanelKeyCatcher {
@@ -177,31 +177,31 @@ Panel {
                 // ---------- header ----------
                 Item {
                     width: parent.width
-                    height: headerCol.implicitHeight + Style.space(20)
+                    height: headerCol.implicitHeight + Commons.Style.space(20)
 
                     Column {
                         id: headerCol
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.leftMargin: Style.space(14)
-                        anchors.rightMargin: Style.space(14)
+                        anchors.leftMargin: Commons.Style.space(14)
+                        anchors.rightMargin: Commons.Style.space(14)
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: Style.space(3)
+                        spacing: Commons.Style.space(3)
 
                         Row {
-                            spacing: Style.space(8)
+                            spacing: Commons.Style.space(8)
 
                             // Back arrow, shown only where there is somewhere to go back to.
                             Text {
                                 visible: root.view !== "now"
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "\uf053"
-                                font.family: Style.font.family
-                                font.pixelSize: Style.font.bodySmall
-                                color: Color.muted
+                                font.family: Commons.Style.font.family
+                                font.pixelSize: Commons.Style.font.bodySmall
+                                color: Commons.Color.muted
                                 MouseArea {
                                     anchors.fill: parent
-                                    anchors.margins: -Style.space(4)
+                                    anchors.margins: -Commons.Style.space(4)
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.back()
                                 }
@@ -211,8 +211,8 @@ Panel {
                                 visible: root.view === "now"
                                 anchors.verticalCenter: parent.verticalCenter
                                 state: service ? service.currentState : "idle"
-                                color: (service && service.currentState === "waiting") ? Color.urgent : Color.popups.text
-                                size: Style.font.subtitle
+                                color: (service && service.currentState === "waiting") ? Commons.Color.urgent : Commons.Color.popups.text
+                                size: Commons.Style.font.subtitle
                             }
 
                             Text {
@@ -220,9 +220,9 @@ Panel {
                                 text: root.view === "list" ? "Conversations"
                                     : root.readingArchive ? Model.trim(root.openedMeta.title, 46)
                                     : Model.describe(service ? service.currentState : "idle").label
-                                font.family: Style.font.family
-                                font.pixelSize: Style.font.bodySmall
-                                color: Color.popups.text
+                                font.family: Commons.Style.font.family
+                                font.pixelSize: Commons.Style.font.bodySmall
+                                color: Commons.Color.popups.text
                             }
 
                             Text {
@@ -233,9 +233,9 @@ Panel {
                                     if (service.currentState === "idle") return "super+h to speak, or type below"
                                     return ""
                                 }
-                                font.family: Style.font.family
-                                font.pixelSize: Style.font.caption
-                                color: Color.muted
+                                font.family: Commons.Style.font.family
+                                font.pixelSize: Commons.Style.font.caption
+                                color: Commons.Color.muted
                             }
                         }
 
@@ -248,15 +248,15 @@ Panel {
                                 if (service.pending.length === 0) bits.push("nothing pending")
                                 return bits.join(" · ")
                             }
-                            font.family: Style.font.family
-                            font.pixelSize: Style.font.caption
+                            font.family: Commons.Style.font.family
+                            font.pixelSize: Commons.Style.font.caption
                             font.features: ({ "tnum": 1 })
-                            color: Color.muted
+                            color: Commons.Color.muted
                         }
                     }
                 }
 
-                Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
+                Rectangle { width: parent.width; height: 1; color: Commons.Util.alpha(Commons.Color.popups.text, 0.14) }
 
                 // ---------- pending write ----------
                 Loader {
@@ -270,28 +270,28 @@ Panel {
                 Column {
                     width: parent.width
                     spacing: 0
-                    bottomPadding: Style.space(10)
+                    bottomPadding: Commons.Style.space(10)
                     visible: root.view === "now"
 
                     Text {
                         text: root.readingArchive ? "ARCHIVED" : "THIS SESSION"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
+                        font.family: Commons.Style.font.family
+                        font.pixelSize: Commons.Style.font.caption
                         font.letterSpacing: 1.4
-                        color: Color.muted
-                        leftPadding: Style.space(14)
-                        topPadding: Style.space(11)
-                        bottomPadding: Style.space(4)
+                        color: Commons.Color.muted
+                        leftPadding: Commons.Style.space(14)
+                        topPadding: Commons.Style.space(11)
+                        bottomPadding: Commons.Style.space(4)
                     }
 
                     Text {
                         visible: root.sessionTurns.length === 0
                         text: root.readingArchive ? "reading…" : "nothing asked yet in this session"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.bodySmall
-                        color: Color.muted
-                        leftPadding: Style.space(14)
-                        bottomPadding: Style.space(6)
+                        font.family: Commons.Style.font.family
+                        font.pixelSize: Commons.Style.font.bodySmall
+                        color: Commons.Color.muted
+                        leftPadding: Commons.Style.space(14)
+                        bottomPadding: Commons.Style.space(6)
                     }
 
                     Repeater {
@@ -303,11 +303,11 @@ Panel {
                             required property int index
                             readonly property bool open: index === root.expanded
                             width: content.width
-                            height: exchange.implicitHeight + Style.space(9)
+                            height: exchange.implicitHeight + Commons.Style.space(9)
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: index === root.cursor ? Util.alpha(Color.popups.text, 0.10)
+                                color: index === root.cursor ? Commons.Util.alpha(Commons.Color.popups.text, 0.10)
                                      : "transparent"
                             }
 
@@ -324,42 +324,42 @@ Panel {
                                 id: exchange
                                 anchors.left: parent.left
                                 anchors.right: parent.right
-                                anchors.leftMargin: Style.space(14)
-                                anchors.rightMargin: Style.space(14)
+                                anchors.leftMargin: Commons.Style.space(14)
+                                anchors.rightMargin: Commons.Style.space(14)
                                 anchors.top: parent.top
-                                anchors.topMargin: Style.space(3)
-                                spacing: Style.space(2)
+                                anchors.topMargin: Commons.Style.space(3)
+                                spacing: Commons.Style.space(2)
 
                                 Row {
-                                    spacing: Style.space(8)
+                                    spacing: Commons.Style.space(8)
                                     Text {
-                                        width: Style.space(34)
+                                        width: Commons.Style.space(34)
                                         text: modelData.time
-                                        font.family: Style.font.family
-                                        font.pixelSize: Style.font.caption
+                                        font.family: Commons.Style.font.family
+                                        font.pixelSize: Commons.Style.font.caption
                                         font.features: ({ "tnum": 1 })
-                                        color: Color.muted
+                                        color: Commons.Color.muted
                                     }
                                     Text {
-                                        width: exchange.width - Style.space(42)
+                                        width: exchange.width - Commons.Style.space(42)
                                         text: turn.open
                                             ? modelData.you : Model.trim(modelData.you, 90)
-                                        font.family: Style.font.family
-                                        font.pixelSize: Style.font.bodySmall
-                                        color: Color.popups.text
+                                        font.family: Commons.Style.font.family
+                                        font.pixelSize: Commons.Style.font.bodySmall
+                                        color: Commons.Color.popups.text
                                         wrapMode: Text.WordWrap
                                     }
                                 }
 
                                 Text {
-                                    x: Style.space(42)
-                                    width: exchange.width - Style.space(42)
+                                    x: Commons.Style.space(42)
+                                    width: exchange.width - Commons.Style.space(42)
                                     text: (turn.open ? "\u25be  " : "\u25b8  ")
                                         + (turn.open ? modelData.claude
                                                      : Model.trim(modelData.claude, 150))
-                                    font.family: Style.font.family
-                                    font.pixelSize: Style.font.bodySmall
-                                    color: Color.muted
+                                    font.family: Commons.Style.font.family
+                                    font.pixelSize: Commons.Style.font.bodySmall
+                                    color: Commons.Color.muted
                                     wrapMode: Text.WordWrap
                                 }
                             }
@@ -372,7 +372,7 @@ Panel {
                     width: parent.width
                     spacing: 0
                     visible: root.view === "list"
-                    bottomPadding: Style.space(10)
+                    bottomPadding: Commons.Style.space(10)
 
                     Repeater {
                         model: root.view === "list" && service ? service.conversations : []
@@ -381,12 +381,12 @@ Panel {
                             required property var modelData
                             required property int index
                             width: content.width
-                            height: entry.implicitHeight + Style.space(14)
+                            height: entry.implicitHeight + Commons.Style.space(14)
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: index === root.cursor ? Util.alpha(Color.popups.text, 0.10)
-                                     : modelData.live ? Util.alpha(Color.popups.text, 0.05)
+                                color: index === root.cursor ? Commons.Util.alpha(Commons.Color.popups.text, 0.10)
+                                     : modelData.live ? Commons.Util.alpha(Commons.Color.popups.text, 0.05)
                                      : "transparent"
                             }
 
@@ -400,37 +400,37 @@ Panel {
                                 id: entry
                                 anchors.left: parent.left
                                 anchors.right: parent.right
-                                anchors.leftMargin: Style.space(14)
-                                anchors.rightMargin: Style.space(14)
+                                anchors.leftMargin: Commons.Style.space(14)
+                                anchors.rightMargin: Commons.Style.space(14)
                                 anchors.verticalCenter: parent.verticalCenter
-                                spacing: Style.space(10)
+                                spacing: Commons.Style.space(10)
 
                                 Text {
                                     anchors.top: parent.top
-                                    anchors.topMargin: Style.space(2)
+                                    anchors.topMargin: Commons.Style.space(2)
                                     text: modelData.live ? "\u25cf" : "\u25cb"
-                                    font.pixelSize: Style.font.caption
-                                    color: modelData.live ? Color.popups.text : Color.muted
+                                    font.pixelSize: Commons.Style.font.caption
+                                    color: modelData.live ? Commons.Color.popups.text : Commons.Color.muted
                                 }
 
                                 Column {
-                                    width: entry.width - Style.space(24)
-                                    spacing: Style.space(2)
+                                    width: entry.width - Commons.Style.space(24)
+                                    spacing: Commons.Style.space(2)
 
                                     Text {
                                         width: parent.width
                                         text: modelData.title
-                                        font.family: Style.font.family
-                                        font.pixelSize: Style.font.bodySmall
-                                        color: Color.popups.text
+                                        font.family: Commons.Style.font.family
+                                        font.pixelSize: Commons.Style.font.bodySmall
+                                        color: Commons.Color.popups.text
                                         elide: Text.ElideRight
                                     }
                                     Text {
                                         text: Model.conversationMeta(modelData)
-                                        font.family: Style.font.family
-                                        font.pixelSize: Style.font.caption
+                                        font.family: Commons.Style.font.family
+                                        font.pixelSize: Commons.Style.font.caption
                                         font.features: ({ "tnum": 1 })
-                                        color: Color.muted
+                                        color: Commons.Color.muted
                                     }
                                 }
                             }
@@ -440,43 +440,43 @@ Panel {
                     Text {
                         visible: !service || service.conversations.length === 0
                         text: "nothing stored yet"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.bodySmall
-                        color: Color.muted
-                        leftPadding: Style.space(14)
-                        topPadding: Style.space(12)
-                        bottomPadding: Style.space(6)
+                        font.family: Commons.Style.font.family
+                        font.pixelSize: Commons.Style.font.bodySmall
+                        color: Commons.Color.muted
+                        leftPadding: Commons.Style.space(14)
+                        topPadding: Commons.Style.space(12)
+                        bottomPadding: Commons.Style.space(6)
                     }
                 }
 
-                Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
+                Rectangle { width: parent.width; height: 1; color: Commons.Util.alpha(Commons.Color.popups.text, 0.14) }
 
                 // ---------- ask by typing ----------
                 Item {
                     width: parent.width
                     visible: root.view === "now" && !root.readingArchive
-                    height: visible ? Style.space(44) : 0
+                    height: visible ? Commons.Style.space(44) : 0
 
                     Row {
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.leftMargin: Style.space(14)
-                        anchors.rightMargin: Style.space(14)
+                        anchors.leftMargin: Commons.Style.space(14)
+                        anchors.rightMargin: Commons.Style.space(14)
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: Style.space(8)
+                        spacing: Commons.Style.space(8)
 
                         StateGlyph {
                             anchors.verticalCenter: parent.verticalCenter
                             state: "typing"
-                            color: Color.muted
-                            size: Style.font.body
+                            color: Commons.Color.muted
+                            size: Commons.Style.font.body
                         }
 
                         TextField {
                             id: askField
-                            width: parent.width - Style.space(30)
+                            width: parent.width - Commons.Style.space(30)
                             anchors.verticalCenter: parent.verticalCenter
-                            foreground: Color.popups.text
+                            foreground: Commons.Color.popups.text
                             placeholderText: "ask without speaking"
                             onAccepted: {
                                 if (service.ask(text)) {
@@ -507,26 +507,26 @@ Panel {
                     }
                 }
 
-                Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.popups.text, 0.14) }
+                Rectangle { width: parent.width; height: 1; color: Commons.Util.alpha(Commons.Color.popups.text, 0.14) }
 
                 // ---------- footer ----------
                 Item {
                     width: parent.width
-                    height: Style.space(68)
+                    height: Commons.Style.space(68)
 
                     Row {
                         anchors.left: parent.left
-                        anchors.leftMargin: Style.space(14)
+                        anchors.leftMargin: Commons.Style.space(14)
                         anchors.top: parent.top
-                        anchors.topMargin: Style.space(11)
-                        spacing: Style.space(8)
+                        anchors.topMargin: Commons.Style.space(11)
+                        spacing: Commons.Style.space(8)
 
                         // Order is the order they are reached by the keyboard:
                         // clear, then log to its right, then the list.
                         Button {
                             visible: root.view === "now" && !root.readingArchive
                             bordered: true
-                            fontSize: Style.font.bodySmall
+                            fontSize: Commons.Style.font.bodySmall
                             text: "clear"
                             hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 1
                             onClicked: { service.clearSession(); root.close() }
@@ -534,7 +534,7 @@ Panel {
                         Button {
                             visible: root.view === "now" && !root.readingArchive
                             bordered: true
-                            fontSize: Style.font.bodySmall
+                            fontSize: Commons.Style.font.bodySmall
                             text: "log"
                             hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 2
                             onClicked: { service.logSession(); root.close() }
@@ -542,7 +542,7 @@ Panel {
                         Button {
                             visible: root.view === "now" && !root.readingArchive
                             bordered: true
-                            fontSize: Style.font.bodySmall
+                            fontSize: Commons.Style.font.bodySmall
                             text: "conversations"
                             hasCursor: root.view === "now" && !root.head && root.cursor === root.exchangeCount + 3
                             onClicked: root.showList()
@@ -550,7 +550,7 @@ Panel {
                         Button {
                             visible: root.readingArchive
                             bordered: true
-                            fontSize: Style.font.bodySmall
+                            fontSize: Commons.Style.font.bodySmall
                             text: "resume"
                             hasCursor: root.readingArchive && root.cursor === root.exchangeCount
                             onClicked: {
@@ -564,9 +564,9 @@ Panel {
                     // the keyboard, which reaches more than the buttons do.
                     Text {
                         anchors.left: parent.left
-                        anchors.leftMargin: Style.space(14)
+                        anchors.leftMargin: Commons.Style.space(14)
                         anchors.bottom: parent.bottom
-                        anchors.bottomMargin: Style.space(9)
+                        anchors.bottomMargin: Commons.Style.space(9)
                         text: root.head ? "enter approve · x discard"
                             : root.view === "list" ? "↑↓ move · enter open · x forget · esc back"
                             : root.readingArchive
@@ -576,9 +576,9 @@ Panel {
                             : root.cursor < root.exchangeCount
                                 ? "↑↓ move · enter expand · " + root.muteHint + " · esc close"
                                 : "↑↓ move · enter choose · " + root.muteHint + " · esc close"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        color: Color.muted
+                        font.family: Commons.Style.font.family
+                        font.pixelSize: Commons.Style.font.caption
+                        color: Commons.Color.muted
                     }
                 }
             }
@@ -591,35 +591,35 @@ Panel {
 
         Column {
             spacing: 0
-            bottomPadding: Style.space(12)
+            bottomPadding: Commons.Style.space(12)
 
             Text {
                 text: "WANTS TO WRITE"
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
+                font.family: Commons.Style.font.family
+                font.pixelSize: Commons.Style.font.caption
                 font.letterSpacing: 1.4
-                color: Color.urgent
-                leftPadding: Style.space(14)
-                topPadding: Style.space(11)
-                bottomPadding: Style.space(5)
+                color: Commons.Color.urgent
+                leftPadding: Commons.Style.space(14)
+                topPadding: Commons.Style.space(11)
+                bottomPadding: Commons.Style.space(5)
             }
 
             Row {
-                leftPadding: Style.space(14)
-                spacing: Style.space(8)
-                bottomPadding: Style.space(6)
+                leftPadding: Commons.Style.space(14)
+                spacing: Commons.Style.space(8)
+                bottomPadding: Commons.Style.space(6)
 
                 Text {
                     text: root.head ? root.head.api + " · " + root.head.tool : ""
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.bodySmall
-                    color: Color.popups.text
+                    font.family: Commons.Style.font.family
+                    font.pixelSize: Commons.Style.font.bodySmall
+                    color: Commons.Color.popups.text
                 }
                 Text {
                     text: root.head ? root.head.method : ""
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    color: Color.urgent
+                    font.family: Commons.Style.font.family
+                    font.pixelSize: Commons.Style.font.caption
+                    color: Commons.Color.urgent
                 }
             }
 
@@ -634,23 +634,23 @@ Panel {
 
                 Row {
                     required property var modelData
-                    leftPadding: Style.space(14)
-                    spacing: Style.space(10)
-                    height: Style.space(19)
+                    leftPadding: Commons.Style.space(14)
+                    spacing: Commons.Style.space(10)
+                    height: Commons.Style.space(19)
 
                     Text {
-                        width: Style.space(72)
+                        width: Commons.Style.space(72)
                         text: modelData.key
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        color: Color.muted
+                        font.family: Commons.Style.font.family
+                        font.pixelSize: Commons.Style.font.caption
+                        color: Commons.Color.muted
                     }
                     Text {
                         text: modelData.value
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.bodySmall
+                        font.family: Commons.Style.font.family
+                        font.pixelSize: Commons.Style.font.bodySmall
                         font.features: ({ "tnum": 1 })
-                        color: Color.popups.text
+                        color: Commons.Color.popups.text
                     }
                 }
             }
@@ -659,32 +659,32 @@ Panel {
             // call, which is what you are actually judging.
             Text {
                 visible: root.head && root.head.transcript
-                leftPadding: Style.space(14)
-                rightPadding: Style.space(14)
-                topPadding: Style.space(8)
+                leftPadding: Commons.Style.space(14)
+                rightPadding: Commons.Style.space(14)
+                topPadding: Commons.Style.space(8)
                 width: content.width
                 text: root.head ? "heard: “" + Model.trim(root.head.transcript, 110) + "”" : ""
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                color: Color.muted
+                font.family: Commons.Style.font.family
+                font.pixelSize: Commons.Style.font.caption
+                color: Commons.Color.muted
                 wrapMode: Text.WordWrap
             }
 
             Row {
-                leftPadding: Style.space(14)
-                topPadding: Style.space(10)
-                spacing: Style.space(8)
+                leftPadding: Commons.Style.space(14)
+                topPadding: Commons.Style.space(10)
+                spacing: Commons.Style.space(8)
 
                 Button {
                     bordered: true
-                    fontSize: Style.font.bodySmall
+                    fontSize: Commons.Style.font.bodySmall
                     text: "approve"
                     hasCursor: root.head && root.cursor === 0
                     onClicked: if (root.head) service.decide(root.head.id, true)
                 }
                 Button {
                     bordered: true
-                    fontSize: Style.font.bodySmall
+                    fontSize: Commons.Style.font.bodySmall
                     text: "discard"
                     hasCursor: root.head && root.cursor === 1
                     onClicked: if (root.head) service.decide(root.head.id, false)
@@ -692,9 +692,9 @@ Panel {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.head ? "expires in " + Model.humanDuration(Math.max(0, root.head.expires_at - service.now)) : ""
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    color: Color.muted
+                    font.family: Commons.Style.font.family
+                    font.pixelSize: Commons.Style.font.caption
+                    color: Commons.Color.muted
                 }
             }
         }

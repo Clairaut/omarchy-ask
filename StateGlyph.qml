@@ -1,5 +1,5 @@
 import QtQuick
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 // One Nerd Font glyph per state. At rest it is a speech bubble rather than a
@@ -7,7 +7,7 @@ import qs.Ui
 // microphone, since while recording that is literally what it is.
 //
 // Drawn the way the rest of the bar draws icons:
-// OpticalGlyph over Style.font.family, so this sits on the same baseline and
+// OpticalGlyph over Commons.Style.font.family, so this sits on the same baseline and
 // optical centre as the stock widgets rather than looking hand-placed.
 //
 // Codepoints are Font Awesome, which JetBrainsMono Nerd Font carries in full.
@@ -15,8 +15,8 @@ Item {
     id: root
 
     property string state: "idle"
-    property color color: Color.foreground
-    property int size: Style.font.icon
+    property color color: Commons.Color.foreground
+    property int size: Commons.Style.font.icon
 
     readonly property var glyphs: ({
         "idle":         "\uf075",  // speech bubble: it takes speech or typing now

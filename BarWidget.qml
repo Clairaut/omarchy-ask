@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "Model.js" as Model
 
@@ -42,14 +42,14 @@ BarWidget {
     // One colour rule: only a request that needs a person changes hue. Everything
     // else varies by weight, so a glance distinguishes "busy" from "waiting".
     readonly property color glyphColor: {
-        if (tone.tone === "urgent") return Color.urgent
-        if (tone.tone === "good") return Color.pick ? Color.pick("bar.text", Color.foreground) : Color.foreground
-        if (tone.tone === "dim") return Color.muted
-        return root.bar ? root.bar.barForeground : Color.foreground
+        if (tone.tone === "urgent") return Commons.Color.urgent
+        if (tone.tone === "good") return Commons.Color.pick ? Commons.Color.pick("bar.text", Commons.Color.foreground) : Commons.Color.foreground
+        if (tone.tone === "dim") return Commons.Color.muted
+        return root.bar ? root.bar.barForeground : Commons.Color.foreground
     }
 
     // Width is fixed across states so the bar never reflows mid-turn.
-    readonly property int slotWidth: Style.space(58)
+    readonly property int slotWidth: Commons.Style.space(58)
 
     readonly property string trailing: {
         if (!service) return ""
@@ -93,7 +93,7 @@ BarWidget {
 
         Row {
             anchors.centerIn: parent
-            spacing: Style.space(6)
+            spacing: Commons.Style.space(6)
 
             StateGlyph {
                 anchors.verticalCenter: parent.verticalCenter
@@ -101,14 +101,14 @@ BarWidget {
                 color: root.glyphColor
                 // iconFont, not iconCanvas: the stock bar buttons render their
                 // glyph at the former and reserve the latter for the canvas.
-                size: Style.bar.iconFont
+                size: Commons.Style.bar.iconFont
             }
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.trailing
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
+                font.family: Commons.Style.font.family
+                font.pixelSize: Commons.Style.font.caption
                 font.features: ({ "tnum": 1 })
                 color: root.glyphColor
             }
